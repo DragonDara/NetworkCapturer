@@ -282,92 +282,10 @@ void on_smtp_client_data(Stream& stream){
 
 
 void on_imap_server_data(Stream& stream){
-    time_t my_time = time(NULL);
     string data(stream.server_payload().begin(), stream.server_payload().end());
-    string return_path, receive, xoriginalto;
 
-    cout << "server:" << endl <<data<<endl;
+    cout << "server:"<<endl<<data<<endl;
 
-    // regex return_path_regex("Return-Path: ([^\r\n]+)");
-    // regex receive_regex("Received: ([^\r\n]+)");
-    // regex xoriginalto_regex("X-Original-To: ([^\r\n]+)");
-    // regex to_regex("To: ([^\r\n]+)");
-    // regex from_regex("From: ([^\r\n]+)");
-    // regex subject_regex("Subject: ([^\r\n]+)");
-    // regex size_regex(" DATA fragment, ([0-9]+)");
-    // regex msg_id_regex("Message-ID: ([^\r\n]+)");
-    // regex content_type_regex("Content-Type: ([^\r\n]+)");
-    // regex file_regex("filename=\"([^\r\n]+)\"");
-    // regex inreplyto_regex("In-Reply-To: ([^\r\n]+)");
-    // regex user_agent_regex("User-Agent: ([^\r\n]+)");
-    // regex x_mailer_regex("X-Mailer: ([^\r\n]+)");
-
-    // string file,content_type;
-    // bool to_valid,from_valid,subject_valid,msg_id_valid, inreplyto_valid,user_agent_valid,x_mailer_valid,return_path_valid, receive_valid,xoriginalto_valid;
-    // smatch to_what,from_what,subject_what,msg_id_what, inreplyto_what,user_agent_what,x_mailer_what,return_path_what,receive_what,xoriginalto_what; 
-
-    // return_path_valid = std::regex_search(data,return_path_what,return_path_regex);
-    // receive_valid = std::regex_search(data,receive_what,receive_regex);
-    // xoriginalto_valid = std::regex_search(data,xoriginalto_what,xoriginalto_regex);
-    // to_valid = regex_search(data, to_what,to_regex);
-    // from_valid = regex_search(data,from_what,from_regex);
-    // subject_valid = regex_search(data,subject_what,subject_regex);
-    // msg_id_valid = regex_search(data,msg_id_what,msg_id_regex);
-    // inreplyto_valid = regex_search(data,inreplyto_what,inreplyto_regex);
-    // user_agent_valid = regex_search(data,user_agent_what, user_agent_regex);
-    // x_mailer_valid = regex_search(data,x_mailer_what,x_mailer_regex);
-
-    // if(return_path_valid){
-    //     if(user_agent_valid){
-    //     //user_agent = boost::lexical_cast<string>(user_agent_what[1]);         
-    //         imap.user_agent_s = user_agent_what[1];
-    //     }
-    //     if(x_mailer_valid){
-    //         //user_agent = boost::lexical_cast<string>(x_mailer_what[1]);
-    //         imap.user_agent_s = x_mailer_what[1];
-    //     }
-    
-    //     std::regex_iterator<std::string::iterator> it_content (data.begin(), data.end(),content_type_regex);
-    //     std::regex_iterator<std::string::iterator> end_content;
-    //     while (it_content != end_content)
-    //     {
-    //         string result = it_content->str();
-    //         eraseSubStringsPre(result, { "Content-Type:", " " });
-    //         content_type += result;
-    //         ++it_content;
-    //     }
-    //     std::regex_iterator<std::string::iterator> it_file (data.begin(), data.end(),file_regex);
-    //     std::regex_iterator<std::string::iterator> end_file;
-    //     while (it_file != end_file)
-    //     {
-    //         string result = it_file->str();
-    //         eraseSubStringsPre(result, { "filename=", " " });
-    //         file += result;
-    //         ++it_file;
-    //     }
-
-
-    //     imap.timestamp_res_s = ctime(&my_time);
-    //     imap.ipv4s_s = stream.client_addr_v4().to_string();
-    //     imap.ipv4d_s = stream.server_addr_v4().to_string();
-    //     imap.sport_s = stream.client_port();
-    //     imap.dport_s = stream.server_port();
-    //     if( to_valid || from_valid || subject_valid|| msg_id_valid|| inreplyto_valid || user_agent_valid){
-    //         //cout << "server pop:"<<endl<<data << endl;
-    //         imap.returnpath_s = return_path_what[1];
-    //         imap.receive_s = receive_what[1];
-    //         imap.xoriginalto_s = xoriginalto_what[1];
-    //         imap.to_s = to_what[1];
-    //         imap.from_s = from_what[1];
-    //         imap.subject_s = subject_what[1];
-    //         imap.msg_id_s = msg_id_what[1];
-    //         imap.inreplyto_s = inreplyto_what[1];
-    //         imap.content_type_s = content_type;
-    //         imap.file_s = file;
-    //         insert_imap(imap);
-    //     }
-    
-    // }
    
 }
 
@@ -375,14 +293,9 @@ void on_imap_server_data(Stream& stream){
 void on_imap_client_data(Stream& stream){
     time_t my_time = time(NULL);
     string data(stream.client_payload().begin(), stream.client_payload().end());
-    cout << "client imap:"<<endl<<data << endl;
-    // regex request_message_regex("UID RFC822.SIZE BODY.PEEK[]");
-    // smatch request_message_what;
-    // if(regex_match(data,request_message_what,request_message_regex)){
-    //     cout << "dara" << endl;
-    // }
+    cout << "client:"<<endl<<data<<endl;
+    
 }
-//117 UID fetch 208 (UID RFC822.SIZE BODY.PEEK[])
 
 void on_pop_server_data(Stream& stream){
     time_t my_time = time(NULL);
