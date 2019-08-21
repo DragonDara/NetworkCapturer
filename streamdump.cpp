@@ -1,10 +1,8 @@
-
 #include <tins/tins.h>
 #include "tins/tcp_ip/stream_follower.h"
 #include "tins/sniffer.h"
 #include "tins/packet.h"
 #include "tins/ip_address.h"
-//#include "tins/ipv6_address.h"
 #include <iostream>
 #include "headers/httpsf.hpp"
 #include <sstream>
@@ -23,6 +21,12 @@
 #include "headers/smtpf.hpp"
 #include "headers/pop3f.hpp"
 #include "headers/imapf.hpp"
+#include <openssl/crypto.h>
+#include <openssl/bio.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 using namespace std;
 
@@ -63,7 +67,50 @@ void eraseSubStringsPre(std::string& mainStr, const std::vector<std::string>& st
 
 }
 
-
+string _asn1string(ASN1_STRING *d)
+{
+    string asn1_string;
+    if (ASN1_STRING_type(d) != V_ASN1_UTF8STRING) {
+        unsigned char *utf8;
+        int length = ASN1_STRING_to_UTF8( &utf8, d );
+        asn1_string= string( (char*)utf8, length );
+        OPENSSL_free( utf8 );
+    } else { 
+        asn1_string= string( (char*)ASN1_STRING_data(d), ASN1_STRING_length(d) );
+    }
+    return asn1_string;
+}
+string _subject_as_line(X509_NAME *subj_or_issuer)
+{
+    BIO * bio_out = BIO_new(BIO_s_mem());
+    X509_NAME_print(bio_out,subj_or_issuer,0);
+    BUF_MEM *bio_buf;
+    BIO_get_mem_ptr(bio_out, &bio_buf);
+    string issuer = string(bio_buf->data, bio_buf->length);
+    BIO_free(bio_out);
+    return issuer;
+}
+//----------------------------------------------------------------------
+std::map<string,string> _subject_as_map(X509_NAME *subj_or_issuer)
+{
+    std::map<string,string> m;    
+    for (int i = 0; i < X509_NAME_entry_count(subj_or_issuer); i++) {
+        X509_NAME_ENTRY *e = X509_NAME_get_entry(subj_or_issuer, i);
+        ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
+        ASN1_OBJECT *o = X509_NAME_ENTRY_get_object(e);
+        const char* key_name = OBJ_nid2sn( OBJ_obj2nid( o ) );
+                m[key_name] = _asn1string(d);
+    }
+    return m;
+}
+string subject_one_line(X509* x509)
+{
+    return _subject_as_line(X509_get_subject_name(x509));
+}
+std::map<string,string> subject(X509* x509)
+{
+    return _subject_as_map(X509_get_subject_name(x509));
+}
 void on_server_data(Stream& stream) {
     string data(stream.server_payload().begin(), stream.server_payload().end());
     time_t my_time = time(NULL); 
@@ -141,7 +188,6 @@ void on_ftp_server_data(Stream& stream){
     bool response_valid,size_valid;
     smatch response_what,size_what;
 
-    cout << data << endl;
     // string status, description;
     time_t my_time = time(NULL);
     response_valid = regex_search(data,response_what,response_regex);
@@ -266,7 +312,6 @@ void on_smtp_client_data(Stream& stream){
     smtp.ipv4d_s = stream.server_addr_v4().to_string();
     smtp.sport_s = stream.client_port();
     smtp.dport_s = stream.server_port();
-    //cout << content_type << endl;
     if(to_valid || from_valid || subject_valid|| msg_id_valid|| inreplyto_valid || user_agent_valid){
         smtp.to_s = to_what[1];
         smtp.from_s = from_what[1];
@@ -282,18 +327,13 @@ void on_smtp_client_data(Stream& stream){
 
 
 void on_imap_server_data(Stream& stream){
-    string data(stream.server_payload().begin(), stream.server_payload().end());
-
-    cout << "server:"<<endl<<data<<endl;
-
-   
+    string data(stream.server_payload().begin(), stream.server_payload().end()); 
 }
 
 
 void on_imap_client_data(Stream& stream){
     time_t my_time = time(NULL);
     string data(stream.client_payload().begin(), stream.client_payload().end());
-    cout << "client:"<<endl<<data<<endl;
     
 }
 
@@ -367,7 +407,6 @@ void on_pop_server_data(Stream& stream){
     pop3.sport_s = stream.client_port();
     pop3.dport_s = stream.server_port();
     if(return_path_valid || receive_valid || xoriginalto_valid || to_valid || from_valid || subject_valid|| msg_id_valid|| inreplyto_valid || user_agent_valid){
-        //cout << "server pop:"<<endl<<data << endl;
         pop3.returnpath_s = return_path_what[1];
         pop3.receive_s = receive_what[1];
         pop3.xoriginalto_s = xoriginalto_what[1];
@@ -394,6 +433,16 @@ void on_pop_client_data(Stream& stream){
         pop3.number_s = stoi(retr_what[1]);
     }
 }
+void on_https_client_data(Stream& stream){
+    time_t my_time = time(NULL);
+    string data(stream.client_payload().begin(), stream.client_payload().end());
+    cout << "client:" << endl << data << endl;
+}
+void on_https_server_data(Stream& stream){
+    time_t my_time = time(NULL);
+    string data(stream.server_payload().begin(), stream.server_payload().end());
+    cout << "server:" << endl << data << endl;
+}
 
 void on_new_connection(Stream& stream) {
 
@@ -415,12 +464,68 @@ void on_new_connection(Stream& stream) {
         https.ipv4d_s = stream.server_addr_v4().to_string();
         https.sport_s = stream.client_port();
         https.dport_s = stream.server_port();
-        insert_https(https);
+        stream.client_data_callback(&on_https_client_data);
+        stream.server_data_callback(&on_https_server_data);
+        // int sd;
+        // struct sockaddr_in addr;
+        // BIO *outbio = NULL;
+        // SSL_METHOD *method;
+        // SSL *ssl;
+        // int port = 443;
+
+        // BIO              *certbio = NULL;
+        // X509                *cert = NULL;
+        // X509_NAME       *certname = NULL;
+        
+        // OpenSSL_add_all_algorithms();
+        // ERR_load_BIO_strings();
+        // ERR_load_crypto_strings();
+        // SSL_load_error_strings();
+
+        // outbio    = BIO_new(BIO_s_file());
+        // outbio    = BIO_new_fp(stdout, BIO_NOCLOSE);
+        
+        // if(SSL_library_init() < 0){
+        //     BIO_printf(outbio, "Could not initialize the OpenSSL library !\n");
+        // }
+
+        // SSL_CTX* ctx = SSL_CTX_new (SSLv23_method());
+        // SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
+
+        // sd = socket(AF_INET, SOCK_STREAM, 0);
+        // memset(&addr, 0, sizeof(addr));
+        // addr.sin_family = AF_INET;
+        // addr.sin_port = htons(stream.server_port());
+        // addr.sin_addr.s_addr = inet_addr(stream.server_addr_v4().to_string().c_str());
+
+        // if ( connect(sd, (struct sockaddr*)&addr, sizeof(addr)) == -1 ) {
+        //     BIO_printf(outbio,"Cannot connect to host %s on port %d.\n", inet_ntoa(addr.sin_addr), port);
+        // }
+
+        // ssl = SSL_new(ctx); 
+        // SSL_set_fd(ssl, sd);
+        // SSL_connect(ssl);
+        // cert = SSL_get_peer_certificate(ssl);
+        // if (cert == NULL)
+        //     printf("Error: Could not get a certificate from: .\n");
+
+        // certname = X509_NAME_new();
+        // certname = X509_get_subject_name(cert);
+        // X509_NAME_print_ex(outbio, certname, 0, 0);
+        // // cout <<"Subject: "    << subject_one_line(cert) << endl;
+        // // map<string,string> sfields = subject(cert);
+        // // for(map<string, string>::iterator i = sfields.begin(), ix = sfields.end(); i != ix; i++ )
+        // // cout << " * " <<  i->first << " : " << i->second << endl;
+        // BIO_printf(outbio, "\n\n");
+        // //insert_https(https);
+        // SSL_free(ssl);
+        // close(sd);
+        // SSL_CTX_free(ctx);
     }
-    if (stream.server_port() == 143){
-        stream.client_data_callback(&on_imap_client_data);
-        stream.server_data_callback(&on_imap_server_data);
-    }
+    // if (stream.server_port() == 143){
+    //     stream.client_data_callback(&on_imap_client_data);
+    //     stream.server_data_callback(&on_imap_server_data);
+    // }
     if (stream.server_port() == 110){
         stream.client_data_callback(&on_pop_client_data);
         stream.server_data_callback(&on_pop_server_data);
@@ -429,7 +534,7 @@ void on_new_connection(Stream& stream) {
 
 
 int main(int argc, char* argv[]) {
-    if (argc != 3) {
+    if (argc != 2) {
         cout << "Usage: " << argv[0] << " <interface> <port>" << endl;
         return 1;
     }
@@ -439,7 +544,7 @@ int main(int argc, char* argv[]) {
         cout << "Starting capture on interface " << argv[1] << endl;
         SnifferConfiguration config;
         config.set_promisc_mode(true);
-        config.set_filter(argv[2]);
+        config.set_filter("tcp port 21 or 80 or 443 or 25 or 110");
         Sniffer sniffer(argv[1], config);
         StreamFollower follower;
         follower.new_stream_callback(&on_new_connection);

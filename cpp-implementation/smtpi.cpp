@@ -5,24 +5,25 @@
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
 #include <cppconn/prepared_statement.h>
+#include </home/dara/sniffer/headers/config.hpp>
 using namespace std;
 
 void insert_smtp(Smtp smtp){
-    printf("Req Time: %s",smtp.timestamp_req_s);
-    cout << "IPv4Src: "  << smtp.ipv4s_s<< endl;
-    cout << "IPv4Dst: "  << smtp.ipv4d_s <<endl; 
-    cout << "Source Port: " << smtp.sport_s<<endl;
-    cout << "Destination Port: " << smtp.dport_s<<endl;
-    cout << "to: " <<smtp.to_s << endl;
-    cout << "from: " <<smtp.from_s << endl;
-    cout << "subject: " <<smtp.subject_s << endl;
-    cout << "size: " <<smtp.size_s << endl;
-    cout << "msg-id: " <<smtp.msg_id_s << endl;
-    cout << "content-type: " <<smtp.content_type_s << endl;
-    cout << "file: " <<smtp.file_s << endl;
-    cout << "in-reply-to: " << smtp.inreplyto_s << endl;
-    cout << "MTA: " << smtp.server_s << endl;
-    cout << "User-Agent: " << smtp.user_agent_s << endl;
+    // printf("Req Time: %s",smtp.timestamp_req_s);
+    // cout << "IPv4Src: "  << smtp.ipv4s_s<< endl;
+    // cout << "IPv4Dst: "  << smtp.ipv4d_s <<endl; 
+    // cout << "Source Port: " << smtp.sport_s<<endl;
+    // cout << "Destination Port: " << smtp.dport_s<<endl;
+    // cout << "to: " <<smtp.to_s << endl;
+    // cout << "from: " <<smtp.from_s << endl;
+    // cout << "subject: " <<smtp.subject_s << endl;
+    // cout << "size: " <<smtp.size_s << endl;
+    // cout << "msg-id: " <<smtp.msg_id_s << endl;
+    // cout << "content-type: " <<smtp.content_type_s << endl;
+    // cout << "file: " <<smtp.file_s << endl;
+    // cout << "in-reply-to: " << smtp.inreplyto_s << endl;
+    // cout << "MTA: " << smtp.server_s << endl;
+    // cout << "User-Agent: " << smtp.user_agent_s << endl;
      
     try {
         sql::Driver *driver2;
@@ -31,7 +32,7 @@ void insert_smtp(Smtp smtp){
         sql::ResultSet *res2;
         sql::PreparedStatement *pstmt2;
         driver2 = get_driver_instance();
-        con2 = driver2->connect("tcp://192.168.101.16:3306", "dara", "P@$$w0rd");
+        con2 = driver2->connect(address, user, pass);
         con2->setSchema("capture");
         pstmt2 = con2->prepareStatement("INSERT INTO smtp_traffic(timestamp_req,ipv4_client,ipv4_server,port_client,port_server,from_email,to_email,size,subject_email,msgid,inreplyto,contenttype,filename,mua,timestamp_res,mta) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);");
         pstmt2->setString(1,smtp.timestamp_req_s);

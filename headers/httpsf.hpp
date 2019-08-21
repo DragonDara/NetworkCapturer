@@ -9,6 +9,7 @@ struct Https{
     string ipv4d_s;
     u_int sport_s;
     u_int dport_s;
+    string url_s;
 };
 void insert_https(Https https) ;
 //#endif // ADD_H_INCLUDED 

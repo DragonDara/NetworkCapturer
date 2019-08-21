@@ -1,4 +1,5 @@
 #include </home/dara/sniffer/headers/ftpf.hpp>
+#include </home/dara/sniffer/headers/config.hpp>
 #include "mysql_connection.h"
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
@@ -20,7 +21,7 @@ void insert_ftp(Ftp ftp){
         sql::ResultSet *res1;
         sql::PreparedStatement *pstmt1;
         driver1 = get_driver_instance();
-        con1 = driver1->connect("tcp://192.168.101.16:3306", "dara", "P@$$w0rd");
+        con1 = driver1->connect(address,user,pass);
         con1->setSchema("capture");
         pstmt1 = con1->prepareStatement("INSERT INTO ftp_traffic(timestamp_req,ipv4_client,ipv4_server,port_client,port_server,user,filename,filesize,duration_time,timestamp_res,status) VALUES (?,?,?,?,?,?,?,?,?,?,?);");
         pstmt1->setString(1,ftp.timestamp_req_s);

@@ -1,4 +1,5 @@
 #include </home/dara/sniffer/headers/httpf.hpp>
+#include </home/dara/sniffer/headers/config.hpp>
 #include "mysql_connection.h"
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
@@ -31,7 +32,8 @@ void insert_http(Http http){
 
         /* Create a connection */
         driver = get_driver_instance();
-        con = driver->connect("tcp://192.168.101.16:3306", "dara", "P@$$w0rd");
+        //con = driver->connect("tcp://192.168.101.16:3306", "dara", "P@$$w0rd");
+        con = driver->connect(address, user, pass);
         /* Connect to the MySQL test database */
         con->setSchema("capture");
         pstmt = con->prepareStatement("INSERT INTO http_traffic(timestamp_req,ipv4_client,ipv4_server,port_client,port_server,action,version,host,cookie,referer,timestamp_res,status,description,location,content_type,setcookie) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);");
