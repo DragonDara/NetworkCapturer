@@ -55,6 +55,7 @@ void insert_http(Http http){
         pstmt->setString(16,http.setcookie_s);
         pstmt->execute();
         delete pstmt;
+        con->close();
         delete con;
     }
     catch (sql::SQLException &e) {

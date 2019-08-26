@@ -53,6 +53,7 @@ void insert_smtp(Smtp smtp){
         pstmt2->setString(16,smtp.server_s);
         pstmt2->execute();
         delete pstmt2;
+        con2->close();
         delete con2;
         }
     catch (sql::SQLException &e) {

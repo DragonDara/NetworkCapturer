@@ -57,6 +57,7 @@ void insert_pop3(Pop3 pop3){
         pstmt2->setString(18,pop3.content_type_s);
         pstmt2->execute();
         delete pstmt2;
+        con2->close();
         delete con2;
         }
     catch (sql::SQLException &e) {

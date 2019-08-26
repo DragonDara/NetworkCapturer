@@ -4,7 +4,6 @@
 #include "tins/packet.h"
 #include "tins/ip_address.h"
 #include <iostream>
-#include "headers/httpsf.hpp"
 #include <sstream>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -21,15 +20,10 @@
 #include "headers/smtpf.hpp"
 #include "headers/pop3f.hpp"
 #include "headers/imapf.hpp"
-#include <openssl/crypto.h>
-#include <openssl/bio.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <string.h>
+
 
 using namespace std;
-
 using namespace Tins;
 
 using Tins::Sniffer;
@@ -42,7 +36,6 @@ Smtp smtp;
 Http http;
 Ftp ftp;
 Pop3 pop3;
-Https https;
 Imap imap;
 
 void eraseAllSubStr(std::string& mainStr, const std::string& toErase)
@@ -67,50 +60,7 @@ void eraseSubStringsPre(std::string& mainStr, const std::vector<std::string>& st
 
 }
 
-string _asn1string(ASN1_STRING *d)
-{
-    string asn1_string;
-    if (ASN1_STRING_type(d) != V_ASN1_UTF8STRING) {
-        unsigned char *utf8;
-        int length = ASN1_STRING_to_UTF8( &utf8, d );
-        asn1_string= string( (char*)utf8, length );
-        OPENSSL_free( utf8 );
-    } else { 
-        asn1_string= string( (char*)ASN1_STRING_data(d), ASN1_STRING_length(d) );
-    }
-    return asn1_string;
-}
-string _subject_as_line(X509_NAME *subj_or_issuer)
-{
-    BIO * bio_out = BIO_new(BIO_s_mem());
-    X509_NAME_print(bio_out,subj_or_issuer,0);
-    BUF_MEM *bio_buf;
-    BIO_get_mem_ptr(bio_out, &bio_buf);
-    string issuer = string(bio_buf->data, bio_buf->length);
-    BIO_free(bio_out);
-    return issuer;
-}
-//----------------------------------------------------------------------
-std::map<string,string> _subject_as_map(X509_NAME *subj_or_issuer)
-{
-    std::map<string,string> m;    
-    for (int i = 0; i < X509_NAME_entry_count(subj_or_issuer); i++) {
-        X509_NAME_ENTRY *e = X509_NAME_get_entry(subj_or_issuer, i);
-        ASN1_STRING *d = X509_NAME_ENTRY_get_data(e);
-        ASN1_OBJECT *o = X509_NAME_ENTRY_get_object(e);
-        const char* key_name = OBJ_nid2sn( OBJ_obj2nid( o ) );
-                m[key_name] = _asn1string(d);
-    }
-    return m;
-}
-string subject_one_line(X509* x509)
-{
-    return _subject_as_line(X509_get_subject_name(x509));
-}
-std::map<string,string> subject(X509* x509)
-{
-    return _subject_as_map(X509_get_subject_name(x509));
-}
+
 void on_server_data(Stream& stream) {
     string data(stream.server_payload().begin(), stream.server_payload().end());
     time_t my_time = time(NULL); 
@@ -433,17 +383,6 @@ void on_pop_client_data(Stream& stream){
         pop3.number_s = stoi(retr_what[1]);
     }
 }
-void on_https_client_data(Stream& stream){
-    time_t my_time = time(NULL);
-    string data(stream.client_payload().begin(), stream.client_payload().end());
-    cout << "client:" << endl << data << endl;
-}
-void on_https_server_data(Stream& stream){
-    time_t my_time = time(NULL);
-    string data(stream.server_payload().begin(), stream.server_payload().end());
-    cout << "server:" << endl << data << endl;
-}
-
 void on_new_connection(Stream& stream) {
 
     if(stream.server_port() == 80){
@@ -457,74 +396,15 @@ void on_new_connection(Stream& stream) {
         stream.client_data_callback(&on_smtp_client_data);
         stream.server_data_callback(&on_smtp_server_data);
     }
-    if (stream.server_port() == 443){
-        time_t my_time = time(NULL);
-        https.timestamp_req_s = ctime(&my_time);
-        https.ipv4s_s = stream.client_addr_v4().to_string();
-        https.ipv4d_s = stream.server_addr_v4().to_string();
-        https.sport_s = stream.client_port();
-        https.dport_s = stream.server_port();
-        stream.client_data_callback(&on_https_client_data);
-        stream.server_data_callback(&on_https_server_data);
-        // int sd;
-        // struct sockaddr_in addr;
-        // BIO *outbio = NULL;
-        // SSL_METHOD *method;
-        // SSL *ssl;
-        // int port = 443;
-
-        // BIO              *certbio = NULL;
-        // X509                *cert = NULL;
-        // X509_NAME       *certname = NULL;
+    // if (stream.server_port() == 443){
+    //     time_t my_time = time(NULL);
+    //     https.timestamp_req_s = ctime(&my_time);
+    //     https.ipv4s_s = stream.client_addr_v4().to_string();
+    //     https.ipv4d_s = stream.server_addr_v4().to_string();
+    //     https.sport_s = stream.client_port();
+    //     https.dport_s = stream.server_port();
+    //     insert_https(https);
         
-        // OpenSSL_add_all_algorithms();
-        // ERR_load_BIO_strings();
-        // ERR_load_crypto_strings();
-        // SSL_load_error_strings();
-
-        // outbio    = BIO_new(BIO_s_file());
-        // outbio    = BIO_new_fp(stdout, BIO_NOCLOSE);
-        
-        // if(SSL_library_init() < 0){
-        //     BIO_printf(outbio, "Could not initialize the OpenSSL library !\n");
-        // }
-
-        // SSL_CTX* ctx = SSL_CTX_new (SSLv23_method());
-        // SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2);
-
-        // sd = socket(AF_INET, SOCK_STREAM, 0);
-        // memset(&addr, 0, sizeof(addr));
-        // addr.sin_family = AF_INET;
-        // addr.sin_port = htons(stream.server_port());
-        // addr.sin_addr.s_addr = inet_addr(stream.server_addr_v4().to_string().c_str());
-
-        // if ( connect(sd, (struct sockaddr*)&addr, sizeof(addr)) == -1 ) {
-        //     BIO_printf(outbio,"Cannot connect to host %s on port %d.\n", inet_ntoa(addr.sin_addr), port);
-        // }
-
-        // ssl = SSL_new(ctx); 
-        // SSL_set_fd(ssl, sd);
-        // SSL_connect(ssl);
-        // cert = SSL_get_peer_certificate(ssl);
-        // if (cert == NULL)
-        //     printf("Error: Could not get a certificate from: .\n");
-
-        // certname = X509_NAME_new();
-        // certname = X509_get_subject_name(cert);
-        // X509_NAME_print_ex(outbio, certname, 0, 0);
-        // // cout <<"Subject: "    << subject_one_line(cert) << endl;
-        // // map<string,string> sfields = subject(cert);
-        // // for(map<string, string>::iterator i = sfields.begin(), ix = sfields.end(); i != ix; i++ )
-        // // cout << " * " <<  i->first << " : " << i->second << endl;
-        // BIO_printf(outbio, "\n\n");
-        // //insert_https(https);
-        // SSL_free(ssl);
-        // close(sd);
-        // SSL_CTX_free(ctx);
-    }
-    // if (stream.server_port() == 143){
-    //     stream.client_data_callback(&on_imap_client_data);
-    //     stream.server_data_callback(&on_imap_server_data);
     // }
     if (stream.server_port() == 110){
         stream.client_data_callback(&on_pop_client_data);
@@ -535,7 +415,7 @@ void on_new_connection(Stream& stream) {
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <interface> <port>" << endl;
+        cout << "Usage: " << argv[0] << " <interface>" << endl;
         return 1;
     }
 
@@ -544,7 +424,7 @@ int main(int argc, char* argv[]) {
         cout << "Starting capture on interface " << argv[1] << endl;
         SnifferConfiguration config;
         config.set_promisc_mode(true);
-        config.set_filter("tcp port 21 or 80 or 443 or 25 or 110");
+        config.set_filter("tcp port 21 or 80 or 25 or 110");
         Sniffer sniffer(argv[1], config);
         StreamFollower follower;
         follower.new_stream_callback(&on_new_connection);
@@ -558,8 +438,9 @@ int main(int argc, char* argv[]) {
             return true;
         });
     }
-     catch (std::exception &ex) {
+    catch (std::exception &ex) {
          cerr << "Error_1: " << ex.what() << endl;
          return 1;
      }
+
 }

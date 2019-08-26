@@ -37,6 +37,7 @@ void insert_ftp(Ftp ftp){
         pstmt1->setUInt(11,ftp.status_s);
         pstmt1->execute();
         delete pstmt1;
+        con1->close();
         delete con1;
         }
     catch (sql::SQLException &e) {
