@@ -17,7 +17,7 @@ void insert_https(Https https){
     // cout << "SNI: "  <<https.hostname_s <<endl; 
     // cout << "Version: " << https.version_s<<endl;
     // cout << "Cipher: " << https.cipher_s<<endl;
-    // // cout << "Method: "<<https.url_s << endl; 
+    // cout << "Method: "<<https.url_s << endl; 
     try {
         sql::Driver *driver;
         sql::Connection *con;
@@ -30,7 +30,7 @@ void insert_https(Https https){
         con = driver->connect(address, user, pass);
         /* Connect to the MySQL test database */
         con->setSchema("capture");
-        pstmt = con->prepareStatement("INSERT INTO https_traffic(timestamp_req,ipv4_client,ipv4_server,port_client,port_server,hostname,version,cipher) VALUES (?,?,?,?,?,?,?,?);");
+        pstmt = con->prepareStatement("INSERT INTO https_traffic(timestamp_req,ipv4_client,ipv4_server,port_client,port_server,hostname,version) VALUES (?,?,?,?,?,?,?);");
         pstmt->setString(1,https.timestamp_s);
         pstmt->setString(2,https.ipv4s_s);
         pstmt->setString(3,https.ipv4d_s);
@@ -38,7 +38,7 @@ void insert_https(Https https){
         pstmt->setInt(5,https.dport_s);
         pstmt->setString(6,https.hostname_s);
         pstmt->setString(7,https.version_s);
-        pstmt->setString(8,https.cipher_s);
+        //pstmt->setString(8,https.cipher_s);
         pstmt->execute();
         delete pstmt;
         con->close();

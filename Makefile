@@ -2,8 +2,8 @@ include /usr/local/etc/PcapPlusPlus.mk
 
 # All Target
 all:
-	g++ $(PCAPPP_INCLUDES)  -c -o main.o pcap++.cpp
-	g++ $(PCAPPP_LIBS_DIR) cpp-implementation/httpsi.cpp cpp-implementation/config.cpp -lmysqlcppconn -std=c++11 -static-libstdc++ -o sniff2 main.o $(PCAPPP_LIBS)
+	g++ $(PCAPPP_INCLUDES) -g -c -o main.o pcap++.cpp
+	g++ $(PCAPPP_LIBS_DIR) -g cpp-implementation/httpsi.cpp cpp-implementation/config.cpp -lmysqlcppconn -lstdc++ -std=c++11 -static-libstdc++ -o sniff2 main.o $(PCAPPP_LIBS)
 	g++ streamdump.cpp cpp-implementation/* -o sniff1 -std=c++11 -lstdc++ -ltins -lmysqlcppconn 
 
 # Clean Target

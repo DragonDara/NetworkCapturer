@@ -62,6 +62,7 @@ void eraseSubStringsPre(std::string& mainStr, const std::vector<std::string>& st
 
 
 void on_server_data(Stream& stream) {
+    //http = Http();
     string data(stream.server_payload().begin(), stream.server_payload().end());
     time_t my_time = time(NULL); 
     
@@ -93,6 +94,7 @@ void on_server_data(Stream& stream) {
 }
 
 void on_client_data(Stream& stream) {
+    //http = Http();
     string data(stream.client_payload().begin(), stream.client_payload().end());
     time_t my_time = time(NULL); 
 
@@ -185,6 +187,7 @@ void on_ftp_client_data(Stream& stream){
 }
 
 void on_smtp_server_data(Stream& stream){
+    //smtp = Smtp();
     time_t my_time = time(NULL);
     string data(stream.server_payload().begin(), stream.server_payload().end());
     string server;
@@ -205,6 +208,7 @@ void on_smtp_server_data(Stream& stream){
 }
 
 void on_smtp_client_data(Stream& stream){
+    smtp = Smtp();
     time_t my_time = time(NULL);
     string data(stream.client_payload().begin(), stream.client_payload().end());
     regex to_regex("To: ([^\r\n]+)");
@@ -288,6 +292,7 @@ void on_imap_client_data(Stream& stream){
 }
 
 void on_pop_server_data(Stream& stream){
+    //pop3 = Pop3();
     time_t my_time = time(NULL);
     string data(stream.server_payload().begin(), stream.server_payload().end());
     string return_path, receive, xoriginalto;
@@ -372,6 +377,7 @@ void on_pop_server_data(Stream& stream){
  
 }
 void on_pop_client_data(Stream& stream){
+    //pop3 = Pop3();
     time_t my_time = time(NULL);
     string data(stream.client_payload().begin(), stream.client_payload().end());
     regex retr_regex("RETR ([^\r\n]+)");
@@ -390,6 +396,7 @@ void on_new_connection(Stream& stream) {
         stream.server_data_callback(&on_server_data);
     }
     if (stream.server_port() == 21){
+        ftp = Ftp();
         stream.client_data_callback(&on_ftp_client_data);
     }
     if (stream.server_port() == 25){

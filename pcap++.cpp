@@ -3,7 +3,6 @@
 #endif
 #include "headers/httpsf.hpp"
 #include "stdlib.h"
-#include <iostream>
 #include "pcapplusplus/Packet.h"
 #include "pcapplusplus/EthLayer.h"
 #include "pcapplusplus/IPv4Layer.h"
@@ -17,29 +16,37 @@
 #include "pcapplusplus/SystemUtils.h"
 #include <string.h>
 #include <time.h>
+#include <signal.h>
+#include <iostream>
 
-using namespace std;
+
 using namespace pcpp;
+using namespace std;
 
 Https https;
 
 #define DEFAULT_CALC_RATES_PERIOD_SEC 2
 
+struct FiltetTrafficArgs
+{
+	bool shouldStop;
+	FiltetTrafficArgs() : shouldStop(false) {}
+};
+
 
 void onApplicationInterrupted(void* cookie)
 {
-	bool* shouldStop = (bool*)cookie;
-	*shouldStop = true;
+	FiltetTrafficArgs* args = (FiltetTrafficArgs*)cookie;
+
+	printf("\n\nApplication stopped\n");
+	args->shouldStop = true;
+
 }
-struct Exm{
-};
 struct SSLPacketArrivedData
 {
 	void getSSLLayer(Packet* packet){
-	
+		https = Https();
 		IPv4Layer* ipLayer = packet->getLayerOfType<IPv4Layer>();
-		//IPv4Option* ipOptions = ipLayer->getFirstOption<IPv4Option>();
-		//IPv4TimestampOptionValue timestamp = ipLayer->getFirstOption().getTimestampOptionValue<IPv4TimestampOptionValue>();
 		TcpLayer* tcpLayer = packet->getLayerOfType<TcpLayer>();
 		if (ipLayer == NULL)
 		{
@@ -81,11 +88,11 @@ struct SSLPacketArrivedData
 
 				// try to find server-hello message
 				pcpp::SSLServerHelloMessage* serverHelloMessage = handshakeLayer->getHandshakeMessageOfType<pcpp::SSLServerHelloMessage>();
-
-				// collect server-hello stats
+				
 				if (serverHelloMessage != NULL)
 				{
 					time_t my_time = time(NULL);
+					string cipher;
 					SSLCipherSuite* cipherSuite = serverHelloMessage->getCipherSuite();
 					https.timestamp_s =ctime(&my_time);
 					https.ipv4s_s = ipLayer->getSrcIpAddress().toString();
@@ -93,7 +100,10 @@ struct SSLPacketArrivedData
 					//cout << "Timestamp: " << <<endl;
 					https.sport_s = (int)ntohs(tcpLayer->getTcpHeader()->portSrc);
 					https.dport_s = (int)ntohs(tcpLayer->getTcpHeader()->portDst);
-					https.cipher_s = cipherSuite->asString();
+					// cout <<"1 "<< https.cipher_s << endl;
+					// cipher = cipherSuite->asString();
+					// https.cipher_s = cipher;
+					// cout << "2 " << https.cipher_s << endl;
 					switch(serverHelloMessage->getHandshakeVersion()){
 						case 2:
 							https.version_s ="SSLv2";
@@ -115,7 +125,8 @@ struct SSLPacketArrivedData
 							break;
 					}
 					insert_https(https);
-				}
+					
+ 				}
 			}
 			sslLayer = packet->getNextLayerOfType<pcpp::SSLLayer>(sslLayer);
 		}
@@ -136,7 +147,7 @@ static void onPacketArrives(pcpp::RawPacket* packet, pcpp::PcapLiveDevice* dev, 
 int main(int argc, char* argv[])
 {
 	 if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <interface> " << endl;
+		 printf("Usage %s <interface>",argv[0]);
         return 1;
     }
 
@@ -151,13 +162,11 @@ int main(int argc, char* argv[])
 	andFilter.addFilter(&protocolFilter);
 
 	// set the filter on the devic
-    std::string interfaceName = "ens33";
-	cout << argv[1] << endl;
 	int printRatePeriod = DEFAULT_CALC_RATES_PERIOD_SEC;
-    PcapLiveDevice* dev = NULL;
-	dev = PcapLiveDeviceList::getInstance().getPcapLiveDeviceByName(argv[1]);
+	PcapLiveDevice* dev = PcapLiveDeviceList::getInstance().getPcapLiveDeviceByName(argv[1]);
+
     if (dev == NULL){
-		cout << "Couldn't find interface by provided IP" << endl;
+		printf("Couldn't find interface by provided IP\n");
 	}
 	if (!dev->open())
 	{
@@ -166,18 +175,20 @@ int main(int argc, char* argv[])
 
 
 	dev->setFilter(andFilter);
-	Exm exm;
-	printf("\nStarting async capture...\n");
-
+	SSLPacketArrivedData* data ;
+	printf("Async start\n");
 	// start capture in async mode. Give a callback function to call to whenever a packet is captured and the stats object as the cookie
-	dev->startCapture(onPacketArrives, &exm);
+	dev->startCapture(onPacketArrives, &data);
 
-	bool shouldStop = false;
-	ApplicationEventHandler::getInstance().onApplicationInterrupted(onApplicationInterrupted, &shouldStop);
-
-	while(!shouldStop)
+	FiltetTrafficArgs args;
+	ApplicationEventHandler::getInstance().onApplicationInterrupted(onApplicationInterrupted, &args);
+	// while(!shouldStop)
+	// {
+	// 	PCAP_SLEEP(printRatePeriod);
+	// }
+	while (!args.shouldStop)
 	{
-		PCAP_SLEEP(printRatePeriod);
+		sleep(2);
 	}
 
 	// stop capturing packets
